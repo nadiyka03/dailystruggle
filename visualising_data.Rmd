@@ -1,0 +1,85 @@
+---
+title: "
+isualising_data"
+output: html_notebook
+---
+
+```{r}
+# read the csv file and save as a viriable calle heart_data
+setwd("/Users/nadiiakuzmenko/Documents/programming_code/notebooks")
+
+	heart_data<- read.csv("../data/heart_attack_data.csv")
+```
+
+```{r}
+# preview the data
+head(heart_data)
+```
+```{r}
+str(heart_data)
+```
+```{r}
+heart_data$sex <- factor(heart_data$sex)
+heart_data$cp <- factor(heart_data$cp)
+heart_data$fbs <- factor(heart_data$fbs)
+heart_data$restecg <- factor(heart_data$restecg)
+heart_data$exang <- factor(heart_data$exang)
+heart_data$target <- factor(heart_data$target)
+summary(heart_data)
+```
+
+```{r}
+str(heart_data)
+```
+
+```{r}
+library(tidyverse)
+```
+# ggplot(mapping = aes ([MAPPING])) + [GEOM_FUNCTION] ()
+A geom is the  name for the specific shape  that  we want  to use to visualize the  data.
+To create  a line graph  with ggplot() + geom_line()function.
+To create  a scatter  plot, we use ggplot() + geom_point()
+To create  a histogram,  we use ggplot() + geom_histogram()
+To create  a bar chart  we use ggplot() + geom_bar()
+To create  a boxplot,  we use ggplot() + geom_boxplot()
+
+
+
+```{r}
+heart_data %>%
+  # setting variables
+  ggplot(aes(x=age, y=chol)) + 
+  # ploting scatterplot & adding color & changing size of bubles & fixing issues
+  geom_point(aes(color = sex), size=2, na.rm = TRUE) +
+#adding title
+    ggtitle("Age vs Chol by Gender")
+
+```
+```{r}
+# adding variable names
+heart_data <- heart_data %>% 
+  mutate(sex = ifelse(sex == 0, "Female", "Male"))
+unique(heart_data$sex)
+```
+
+```{r}
+# visualizing the relationship between age, chol and heart disease (TARGET)
+heart_data %>%
+  ggplot(aes(x=age, y=chol, z=target)) +
+  geom_point(aes(color= target), na.rm = TRUE) +
+    ggtitle("Age Vs Chol and Heart dissease")
+```
+```{r}
+# adding variable names
+heart_data <- heart_data %>% 
+  mutate(target = ifelse(target == 1, "Disease", "No disease"))
+unique(heart_data$target)
+```
+
+```{r}
+heart_data %>%
+  ggplot(aes(x=age)) +
+  geom_histogram(fill="pink", color="purple", binwidth = 5, alpha=0.9) +
+  ggtitle("Histogram with binwidth 5")
+```
+
