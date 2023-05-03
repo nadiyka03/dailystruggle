@@ -1,0 +1,96 @@
+---
+title: "querying_data"
+output: html_notebook
+---
+```{r}
+setwd("/Users/nadiiakuzmenko/Documents/programming_code/notebooks")
+```
+
+```{r}
+install.packages("DBI")
+install.packages("RSQLite")
+```
+```{r}
+# connecting to a database that we have currently stored in pur data folder
+library(DBI)
+filename <- "../data/prod_sample.db"
+my_connection <- dbConnect(RSQLite::SQLite(),
+                           dbname = filename)
+my_connection
+```
+```{r}
+# check what tables exist in a database
+dbListTables(my_connection)
+# we have 2 tables
+```
+```{sql connection=my_connection}
+/* sql query to view the first ten rows of table */ 
+select *
+from online_retail_history
+limit 10
+```
+```{sql connection=my_connection}
+/* write a sql query to view the first 5 rows */
+select *
+from stock_description
+limit 5
+
+```
+```{sql connection=my_connection}
+/* count number of rows in a table */
+select count(*) as number_rows 
+from online_retail_history 
+```
+```{sql connection=my_connection}
+select count(*) as number_rows
+from stock_description
+```
+```{sql connection=my_connection}
+/* calculate the total number of items sold */ 
+select sum(quantity) as total_quantity
+from online_retail_history
+```
+```{sql connection=my_connection}
+/* average price of the products sold */
+select avg(price) as average_price
+from online_retail_history
+```
+```{sql connection=my_connection}
+/* min price of product sold */
+select min(price) as min_price
+from online_retail_history
+where Price >0 
+```
+```{sql connection=my_connection}
+/* calculate the max price */
+select max(price) as max_price
+from online_retail_history
+
+```
+```{sql connection=my_connection}
+/* 1. calculate the number of unique customers */
+select count(distinct CustomerID) as munber_unique_customers
+from online_retail_history
+```
+```{sql connection=my_connection}
+/* 2 count invoces*/
+select count(distinct Invoice) as number_of_invoice
+from online_retail_history
+```
+```{sql connection=my_connection}
+/* 3. when was the first and last invoice */
+select min(InvoiceDate) as first_invoice,
+max(InvoiceDate) as last_invoice
+from online_retail_history
+```
+```{sql connection=my_connection}
+/* 4. how many diff types of stocks did the customers purchase? */
+select count(distinct StockCode) as number_stock_types
+from online_retail_history
+```
+```{sql connection=my_connection}
+/* 5. how many stocks does the stock_table contain? */
+select count(distinct StockCode) as number_stocks
+from stock_description
+```
+
