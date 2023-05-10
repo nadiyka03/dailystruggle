@@ -1,0 +1,140 @@
+---
+title: "Quering Data 2"
+output: html_notebook
+---
+```{r}
+setwd("/Users/nadiiakuzmenko/Documents/programming_code/notebooks")
+```
+
+```{r}
+# connecting to a database that we have currently stored in pur data folder
+library(DBI)
+filename <- "../data/prod_sample.db"
+my_connection <- dbConnect(RSQLite::SQLite(),
+                           dbname = filename)
+my_connection
+```
+
+```{r} 
+# check what tables exist in a database
+dbListTables(my_connection)
+# we have 2 tables
+```
+```{sql connection=my_connection}
+select *
+from online_retail_history
+limit 10
+```
+```{sql connection=my_connection}
+select *
+from stock_description
+limit 5
+```
+```{sql connection=my_connection}
+/* 1. count number of rows */
+select count(*) as number_rows
+from online_retail_history
+
+```
+```{sql connection=my_connection}
+/* 2. count rows */
+select count(*) as number_rows
+from stock_description
+```
+```{sql connection=my_connection}
+/* 3. when is the first & last invoice */
+select min(invoicedate) as firstInvoiceDate,
+max(invoicedate) as lastInvoiceDate
+from online_retail_history
+
+```
+```{sql connection=my_connection}
+/* 4.how much is the price for average goods */
+select avg(price) as AveragePriceinUK
+from online_retail_history
+where country = 'United Kingdom'
+```
+```{sql connection=my_connection}
+/* select columns*/
+select CustomerID
+from online_retail_history
+```
+```{sql connection=my_connection}
+/* select distinct customers*/
+select distinct CustomerID
+from online_retail_history
+```
+```{sql connection=my_connection}
+/* count distinct customers*/
+select count(distinct CustomerID) as number_unique_customers
+from online_retail_history
+```
+```{sql connection=my_connection}
+/* count unique customers per country*/
+select Country,
+count(distinct CustomerID) as number_unique_customer
+from online_retail_history
+group by Country
+```
+```{sql connection=my_connection}
+/* find a country with the biggest number of unique customers*/
+select Country
+from online_retail_history
+group by Country
+order by count(distinct CustomerID) desc
+limit 1
+```
+```{sql connection=my_connection}
+/*1. how many invoices does table contains? */
+select count( distinct Invoice) as unique_invoice_number
+from online_retail_history
+```
+```{sql connection=my_connection}
+/*2. count diff. types of stocks purchased */
+select count( distinct StockCode) as number_of_stock_types 
+from online_retail_history
+
+```
+```{sql connection=my_connection}
+/* 3. count unique stocks */
+select count(distinct StockCode) as number_of_unique_stocks
+from stock_description
+```
+```{sql connection=my_connection}
+/* 5. count negative quantity/negative price */
+select  count(distinct Invoice)
+from online_retail_history
+where Quantity<0 or Price<0
+
+
+```
+```{sql connection=my_connection}
+/* 4. count stocks that have ? in description*/
+select count(Description)
+from stock_description
+where Description like "%?%"
+```
+```{sql connection=my_connection}
+/* 6. find the stock code for the most popular stock */
+select StockCode,
+sum(Quantity) as total_purchased
+from online_retail_history
+group by StockCode
+
+```
+
+```{sql connection=my_connection}
+/* 6. find the stock code for the most popular stock */
+select StockCode,
+sum(Quantity) as total_purchased
+from online_retail_history
+group by StockCode
+order by total_purchased desc
+limit 1
+```
+```{sql connection=my_connection}
+/* 7. what is the description of the most popular stock */
+select Description
+from stock_description
+where StockCode = '22197'
+```
