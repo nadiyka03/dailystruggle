@@ -1,0 +1,125 @@
+---
+title: "Quering Data 3"
+output: html_notebook
+---
+```{r}
+setwd("/Users/nadiiakuzmenko/Documents/programming_code/notebooks")
+```
+
+```{r}
+# connecting to a database that we have currently stored in pur data folder
+library(DBI)
+filename <- "../data/prod_sample.db"
+my_connection <- dbConnect(RSQLite::SQLite(),
+                           dbname = filename)
+my_connection
+```
+```{r}
+# check what tables exist in a database
+dbListTables(my_connection)
+# we have 2 tables
+```
+```{sql connection=my_connection}
+select *
+from online_retail_history
+limit 10
+```
+```{sql connection=my_connection}
+/*4.1. select first 10 lines of table*/
+select *
+from stock_description
+limit 10
+```
+```{sql connection=my_connection}
+/*4.2. count number of orders*/
+select count(distinct Invoice)
+from online_retail_history
+```
+```{sql connection=my_connection}
+/*4.3. find min/max price for germany */
+select min(Price) as min_price_germany, 
+max(Price) as max_price_germany
+from online_retail_history
+where country= "Germany"
+```
+```{sql connection=my_connection}
+/*4.4. what is the stock code for most expensive price in germany?*/
+select distinct StockCode as most_expensive_code
+from online_retail_history
+where Price= "599.5"
+```
+```{sql connection=my_connection}
+/*4.5 description of the most expencive thing in germany*/
+select Description
+from stock_description
+where stockcode = "M"
+```
+```{sql connection=my_connection}
+/*5.1 top 10 countries wich the highest average price for items sold*/
+select Country, avg(Price)
+from online_retail_history
+group by Country 
+order by avg(Price) DESC
+limit 10
+```
+```{sql connection=my_connection}
+/*5.2. which country has the most customers*/
+select Country, count(distinct CustomerID)
+from online_retail_history
+group by Country
+order by CustomerID DESC 
+limit 1
+```
+```{sql connection=my_connection}
+/*5.3 which country has the second most customers?*/
+select Country, count(distinct CustomerID)
+from online_retail_history
+where Country <> "United Kingdom"
+group by Country
+order by count(distinct CustomerID) DESC
+limit 1
+```
+```{sql connection=my_connection}
+/*5.4. which customer spend the most? */
+select CustomerID, sum(Price * Quantity) as max_spending
+from online_retail_history
+where CustomerID is not null
+group by CustomerID
+order by sum(Price * Quantity) DESC
+limit 1
+```
+```{sql connection=my_connection}
+/* 6. left join 2 tables */
+select t1.*,
+t2.Description
+from online_retail_history t1
+left join stock_description t2 on t1.StockCode = t2.StockCode
+```
+```{sql connection=my_connection}
+/* 7. inner join 2 tables*/
+select t1.*,
+t2.Description 
+from online_retail_history t1
+inner join stock_description t2 on t1.StockCode = t2.StockCode
+
+```
+```{sql connection=my_connection}
+/* 8. identify stock codes with missing descriptions */
+select count(distinct t1.StockCode) as missing_descriptions
+from online_retail_history t1
+left join stock_description t2 on t1.StockCode = t2.StockCode
+where t2.Description is null
+```
+```{sql connection=my_connection}
+/* 9. join 2 tables and find 10 best-selling products */
+select  sum(Quantity), Description
+from online_retail_history t1
+
+left join stock_description t2 on t1.StockCode = t2.StockCode
+where Description <> "?"
+group by Description
+order by sum(Quantity) DESC 
+
+limit 10
+```
+
