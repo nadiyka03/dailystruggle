@@ -1,0 +1,499 @@
+---
+title: "Exam Project"
+output: html_notebook
+---
+```{r}
+# setting the working directory
+setwd("/Users/nadiiakuzmenko/Documents/programming_code/final_asigment")
+```
+
+```{r}
+# connecting to a database that we have currently stored in our data folder
+library(DBI)
+filename <- "../data/exam_database.db"
+movie_connection <- dbConnect(RSQLite::SQLite(),
+                           dbname = filename)
+movie_connection
+library(tidyverse)
+```
+
+```{r}
+# checking what are we working with
+dbListTables((movie_connection))
+```
+```{r}
+# question 1.1 Comparing top 10 highest scoring movies on IMDb and their Rotten Tomatoes Audience score
+# turning joined tables with film names and IMDb reviews into an R variable imdb
+query_imdb <- paste("select t1.film_name, t2.score as imdb_scores
+from films t1
+join imdb_scores t2 on t1.film_id=t2.film_id",
+               sep = "" )
+imdb <- tbl(movie_connection, sql(query_imdb))
+
+# turning joined tables with film names and rotten tomatoes reviews into an R variable rotten_tomatoes_audience
+query_rotten_tomatoes_audience <- paste("select t1.film_name, t2.audience_score as rotten_tomatoes_audience_scores
+from films t1
+join rotten_tomatoes_scores t2 on t1.film_id=t2.film_id",
+               sep = "" )
+rotten_tomatoes_audience <- tbl(movie_connection, sql(query_rotten_tomatoes_audience))
+
+```
+
+
+```{r}
+# question 1.1 Comparing top 10 highest scoring movies on IMDb and their Rotten Tomatoes Audience score
+# finding 10 best films
+imdb_and_rotten_10_best_comparison <- imdb %>%
+  full_join(rotten_tomatoes_audience, by= "film_name") %>%
+  arrange(desc(imdb_scores)) %>%
+  filter(imdb_scores>=87)
+# now visualize the results!
+imdb_and_rotten_10_best_comparison %>%
+  ggplot(aes(x=rotten_tomatoes_audience_scores, y=imdb_scores, label= film_name)) +  
+  geom_point()+
+  geom_text(color="purple", vjust="inward", check_overlap=TRUE, size=2)+
+  ggtitle("Comparing top 10 highest scoring movies on IMDb and their Rotten Tomatoes Audience score")+
+   xlab("Rotten Tomatoes Audience score")+ 
+ylab("IMDb score")
+
+```
+
+```{r}
+#  question 1.2. Comparing 10 highest scoring movies on Rotten Tomatoes Audience rating and their IMDb score
+# finding 10 best films
+rotten_tomatoes_audience <- tbl(movie_connection, sql(query_rotten_tomatoes_audience))
+rotten_and_imdb_10_best_comparison <- rotten_tomatoes_audience %>%
+  full_join(imdb, by= "film_name") %>%
+  arrange(desc(rotten_tomatoes_audience_scores)) %>%
+  filter(rotten_tomatoes_audience_scores>=96)
+# now visualize the results!
+rotten_and_imdb_10_best_comparison %>%
+  ggplot(aes(x=rotten_tomatoes_audience_scores, y=imdb_scores, label= film_name)) +  
+  geom_point()+
+  geom_text(color="purple", vjust="inward", check_overlap=TRUE, size=2)+
+  ggtitle("Comparing 10 highest scoring movies on Rotten Tomatoes Audience rating and their IMDb score")+
+ xlab("Rotten Tomatoes Score")+ 
+ylab("IMDb score")
+
+```
+
+```{sql connection=movie_connection}
+/* question 3.1 Finding the best movie of each year for the last 10 years */ 
+select t1.release_year, 
+       t1.film_name, t2.score as imdb_score
+from films t1
+left join imdb_scores t2 on t1.film_id = t2.film_id
+group by release_year
+order by release_year DESC, 
+      max(imdb_score) DESC
+limit 10
+
+```
+
+```{sql connection=movie_connection}
+/* uestion 3.2. Finding 10 worst films according to rotten tomatoes audience */
+select t1.film_name,
+t2.audience_score as rotten_tomatoes_audience_scores
+from films t1
+join rotten_tomatoes_scores t2 on t1.film_id=t2.film_id
+order by audience_score ASC
+limit 10
+
+```
+
+```{sql connection=movie_connection}
+/* question 3.3 Finding 10 worst films according to rotten tomatoes critics */
+select t1.film_name, t2.critic_score as rotten_tomatoes_critic_scores
+from films t1
+join rotten_tomatoes_scores t2 on t1.film_id=t2.film_id
+order by critic_score ASC
+limit 10
+
+```
+
+```{sql connection=movie_connection}
+/* question 3.4. Finding 10 worst films according to IMDb */
+select t1.film_name, t2.score as imdb_scores
+from films t1
+join imdb_scores t2 on t1.film_id=t2.film_id
+order by score ASC
+limit 10
+
+```
+
+```{sql connection=movie_connection} 
+/* question 4.1 Finding the highest rated genre based on critic scores */
+select t1."genre(s)" as genre,
+  t2.score as imdb_scores,
+  t3.audience_score as audience_score_rotten_tomatoes, 
+  t3.critic_score as critic_score_rotten_tomatoes
+from films t1
+join rotten_tomatoes_scores t3 on t1.film_id=t3.film_id
+join imdb_scores t2 on t1.film_id=t2.film_id
+group by genre
+order by t3.critic_score desc
+limit 1
+
+/* the highest rated genre is the combination of Western and Drama and that it is rated significantely lower by the audience */
+```
+```{sql connection=movie_connection}
+/* question 4.2. Finding the highest rated genre based on Rotten Tomatoes audience score */
+select t1."genre(s)" as genre,
+  t2.score as imdb_scores,
+  t3.audience_score as audience_score_rotten_tomatoes, 
+  t3.critic_score as critic_score_rotten_tomatoes
+from films t1
+join rotten_tomatoes_scores t3 on t1.film_id=t3.film_id
+join imdb_scores t2 on t1.film_id=t2.film_id
+group by genre
+order by t3.audience_score desc
+limit 1
+
+/* the highest rated genre is the combination of Horror and Sci-fi;
+we can also see that this genres scored higher from critics and lower from imdb audience */
+```
+
+```{sql connection=movie_connection}
+/* question 4.3. Finding the highest rated genre based on IMDb audience scores */
+select t1."genre(s)" as genre,
+  t2.score as imdb_scores,
+  t3.audience_score as audience_score_rotten_tomatoes, 
+  t3.critic_score as critic_score_rotten_tomatoes
+from films t1
+join rotten_tomatoes_scores t3 on t1.film_id=t3.film_id
+join imdb_scores t2 on t1.film_id=t2.film_id
+group by genre
+order by imdb_scores desc
+limit 1
+
+/* the highest rated genre is  also the combination of Horror and Sci-fi */
+```
+```{sql connection=movie_connection}
+/* question 5. Finding how genre "Horror, Sci-fi" scored throughout the years */
+
+select
+  t1.release_year,
+  avg(t2.score) as imdb_scores,
+  avg(t3.audience_score) as audience_score_rotten_tomatoes, 
+  avg(t3.critic_score) as critic_score_rotten_tomatoes
+from films t1
+join rotten_tomatoes_scores t3 on t1.film_id=t3.film_id
+join imdb_scores t2 on t1.film_id=t2.film_id
+where "genre(s)" like '%Horror,Sci-fi%'
+group by release_year
+order by t1.release_year asc
+
+```
+```{r}
+# question 5. Finding how genre "Horror, Sci-fi" scored throughout the years
+# plot the distribution of how Horror, sci-fi scored throughout the years
+# write the sql query in the paste function and store as a variable called query
+query <- paste('
+select
+  t1.release_year,
+  avg(t2.score) as imdb_scores,
+  avg(t3.audience_score) as audience_score_rotten_tomatoes, 
+  avg(t3.critic_score) as critic_score_rotten_tomatoes
+from films t1
+join rotten_tomatoes_scores t3 on t1.film_id=t3.film_id
+join imdb_scores t2 on t1.film_id=t2.film_id
+where "genre(s)" like "%Horror,Sci-fi%"
+group by release_year
+order by t1.release_year asc',
+sep = "")
+
+#pass connection to query
+horrorscifi_by_year <- tbl(movie_connection, sql(query))
+horrorscifi_by_year
+```
+
+```{r}
+# question 5.1. Vizualizing how genre "Horror, Sci-fi" scored throughout the years
+horrorscifi_by_year %>%
+  ggplot(aes(x=release_year, y = imdb_scores)) +
+   geom_bar(stat = 'identity', color="white", fill="pink") +
+    xlab('release year') +
+     ylab('imdb scores') +
+      ggtitle("How Horror, Sci-fi scored") +
+       theme(axis.text.x = element_text(angle = 90, size = 8))
+```
+
+```{sql connection= movie_connection}
+/* question 6.1 Finding the lowest rated genre based on critic scores */
+
+select t1."genre(s)" as genre,
+  t2.score as imdb_scores,
+  t3.audience_score as audience_score_rotten_tomatoes, 
+  t3.critic_score as critic_score_rotten_tomatoes
+from films t1
+join rotten_tomatoes_scores t3 on t1.film_id=t3.film_id
+join imdb_scores t2 on t1.film_id=t2.film_id
+group by genre
+order by t3.critic_score asc
+limit 1
+
+/* the lowest rated genre by critics is Action, it is rated significantly higher by both Rotten Tomatoes and IMDb audiences */
+```
+```{sql connection=movie_connection}
+/* question 6.2 Finding the lowest rated genre based on Rotten Tomatoes audience score */
+
+select t1."genre(s)" as genre,
+  t2.score as imdb_scores,
+  t3.audience_score as audience_score_rotten_tomatoes, 
+  t3.critic_score as critic_score_rotten_tomatoes
+from films t1
+join rotten_tomatoes_scores t3 on t1.film_id=t3.film_id
+join imdb_scores t2 on t1.film_id=t2.film_id
+group by genre
+order by t3.audience_score asc
+limit 1
+
+/* the lowest rated genre by critics is the combination of Action, Horror, Sci-Fi,  it is rated even lower by critics and higher by IMDb audience */
+```
+
+```{sql connection=movie_connection}
+/* question 6.3 Finding the lowest rated genre based on IMDb audience score */
+
+select t1."genre(s)" as genre,
+  t2.score as imdb_scores,
+  t3.audience_score as audience_score_rotten_tomatoes, 
+  t3.critic_score as critic_score_rotten_tomatoes
+from films t1
+join rotten_tomatoes_scores t3 on t1.film_id=t3.film_id
+join imdb_scores t2 on t1.film_id=t2.film_id
+group by genre
+order by imdb_scores asc
+limit 1
+
+/* the lowest rated genre by critics is the combination of Action and Sport; it is rated even lower by critics and significantly higher by Rotten Tomatoes audience */
+```
+
+```{sql connection=movie_connection}
+/* question 7. Finding how genre "Action, Horror, Sci-Fi" scored throughout the years */
+
+select
+  t1.release_year,
+  avg(t2.score) as imdb_scores,
+  avg(t3.audience_score) as audience_score_rotten_tomatoes, 
+  avg(t3.critic_score) as critic_score_rotten_tomatoes
+from films t1
+join rotten_tomatoes_scores t3 on t1.film_id=t3.film_id
+join imdb_scores t2 on t1.film_id=t2.film_id
+where "genre(s)" like '%Action,Horror,Sci-fi%'
+group by release_year
+order by t1.release_year asc
+
+```
+
+```{r}
+# question 7. Finding how genre "Action, Horror, Sci-Fi" scored throughout the years
+# plot the distribution of how Action, Horror, sci-fi scored throughout the years
+# write the sql query in the paste function and store as a variable called query
+query <- paste('
+select
+  t1.release_year,
+  avg(t2.score) as imdb_scores,
+  avg(t3.audience_score) as audience_score_rotten_tomatoes, 
+  avg(t3.critic_score) as critic_score_rotten_tomatoes
+from films t1
+join rotten_tomatoes_scores t3 on t1.film_id=t3.film_id
+join imdb_scores t2 on t1.film_id=t2.film_id
+where "genre(s)" like "%Action,Horror,Sci-fi%"
+group by release_year
+order by t1.release_year asc',
+sep = "")
+
+#pass connection to query
+actionhorrorscifi_by_year <- tbl(movie_connection, sql(query))
+actionhorrorscifi_by_year
+
+```
+
+```{r}
+#question 7.1. Vizualizing how genre "Horror, Sci-fi" scored throughout the years
+actionhorrorscifi_by_year %>%
+  ggplot(aes(x=release_year, y = imdb_scores)) +
+   geom_bar(stat = 'identity', color="white", fill="pink") +
+    xlab('release year') +
+     ylab('imdb scores') +
+      ggtitle("How Horror, Sci-fi scored") +
+       theme(axis.text.x = element_text(angle = 90, size = 8))
+```
+
+```{r}
+# question 8. Finding the Best/worst films by each genre in the last decade
+library(DBI)
+# parts of query that selects best/worst movie of specific genre in the last decade
+start <- "select t1.film_name,
+    t2.score as imdb_scores,
+    t3.audience_score as audience_score_rotten_tomatoes, 
+    t3.critic_score as critic_score_rotten_tomatoes
+    from films t1
+    join rotten_tomatoes_scores t3 on t1.film_id=t3.film_id
+    join imdb_scores t2 on t1.film_id=t2.film_id
+    where t1.release_year > 2012 AND t1.\"genre(s)\" LIKE \"%"
+
+endBest <- "%\"
+    order by ((t3.critic_score + t3.audience_score) / 2 + t2.score) desc
+    limit 1"
+
+endWorst <- "%\"
+    order by ((t3.critic_score + t3.audience_score) / 2 + t2.score) asc
+    limit 1"
+
+# query that selects all the genres 
+res <- dbGetQuery(movie_connection, "select \"genre(s)\" as 
+                  g from films order by g")
+#code that parses query result to a list of unique genres strings
+genres = list()
+
+for (res2 in res) {
+  for (el in res2) {
+    for (g in strsplit(el,",")) {
+      for (f in g) {
+        genres <- append(genres, f)
+      }
+    }
+  }
+}
+
+genres <- unique(genres)
+genres <- sort(unlist(genres), decreasing = FALSE )
+
+# code that cycles through all genres and selects best and worst movie
+for (g in genres) {
+  print("genre")
+  print(g)
+  print("best film:")
+  best <- dbGetQuery(movie_connection, paste0(start, g, endBest))
+  for (b in best) {
+    print(b)
+    break
+  }
+  print("worst film:")
+  best <- dbGetQuery(movie_connection, paste0(start, g, endWorst))
+  for (b in best) {
+    print(b)
+    break
+  }
+}
+
+```
+
+```{r}
+# question 9. Finding how many out of top 10 rated movies by audience scores are directed by women?
+# finding top 10 movies according to Rotten Tomatoes audience score and turning it into r data frame
+query <- paste('select t1.film_name, t2.audience_score as rotten_tomatoes_audience_scores
+from films t1
+join rotten_tomatoes_scores t2 on t1.film_id=t2.film_id
+order by audience_score DESC
+limit 10',
+sep = "")
+rotten_tomatoes_top_10 <- tbl(movie_connection, sql(query))
+
+rotten_tomatoes_top_10_df <- data.frame(rotten_tomatoes_top_10)
+rotten_tomatoes_top_10_df
+```
+
+```{r}
+# question 9. Finding how many out of top 10 rated movies by audience scores are directed by women?
+# creating a data frame, contaning name and gender of movie directors for selected movies
+directors <- data.frame( film_name=c("The Shawshank Redemption", "Love Jones", "Schindler's List", "American History X", "Das Boot", "Fight Club", "One Flew Over the Cuckoo's Nest", "Pulp Fiction", "Raiders of the Lost Ark", "Spirited Away"),
+  name=c( "Frank Darabont", "Theodore Witcher",  "Steven Spielberg", "David McKenna", "Wolfgang Petersen", "David Fincher", "Miloš Forman", "Quentin Tarantino", "Steven Spielberg", "Hayao Miyazaki"),
+                       gender=c("male", "male", "male", "male", "male", "male", "male", "male", "male", "male"))
+directors 
+# as we can see there are no female directors in this top 10 films
+```
+
+```{r}
+# question 10. Finding if there is any difference in action movie rating before 9/11 & after?
+# combining al given data in 1 table and turning it into an r variable
+query_all_data <- paste("select t1.*, t2.score as imdb_score, t3.audience_score as audience_score_rotten_tomatoes, t3.critic_score as critic_score_rotten_tomatoes
+from films t1
+join imdb_scores t2 on t1.film_id=t2.film_id
+join rotten_tomatoes_scores t3 on t1.film_id=t3.film_id",
+               sep = "" )
+all_data <- tbl(movie_connection, sql(query_all_data))
+all_data
+
+```
+
+```{r}
+# question 10. Finding if there is any difference in action movie rating before 9/11 & after?
+# turning all_data list into a data frame
+library(dplyr)
+all_data_df <- as_tibble(all_data)
+#change the name of colunm genre(s) to genre so it doesn't give error
+colnames(all_data_df)[3]= 'genre'
+
+# finding action movies made before 9/11
+action_movies<- all_data_df %>%
+  filter(grepl('Action', genre)) %>%
+    mutate(movies_before_2001 = ifelse(release_year<2001, "Before 9/11", "After 9/11"))
+  
+action_movies
+```
+
+
+```{r}
+# question 10.1 visualizing the results 
+action_movies %>%
+  ggplot(aes(x= imdb_score, y= audience_score_rotten_tomatoes, color = movies_before_2001, fill= movies_before_2001)) +
+  geom_point() +
+  ggtitle("Action movies made before and after 9/11")+
+ylab("Audience score rotten tomatoes") +
+  xlab("IMDb score") +
+ theme(legend.title = element_blank()) 
+# as we can see you there is no vizible difference
+```
+
+
+```{r}
+# extra question 11. comparing  5 best movies (from the ones given) according to Nadiia's very biased opinion to their IMDb rating 
+# transforming variable from question 1, that contains film names and their IMDb scores, into a data frame
+imdb_df <- data.frame(imdb)
+# creating a data frame with my scores
+n_score <- data.frame(film_name= c( "10 Things I Hate About You", "But I'm a Cheerleader", "Clueless", "D.E.B.S.", "Confessions of a Teenage Drama Queen"),
+                                     my_score= c(1, 2, 3, 4, 5))
+# joining 2 data frames together
+fav_films_imdb <- n_score %>% 
+  left_join(imdb_df, by="film_name")
+fav_films
+```
+
+```{r}
+# extra question 11.1 now let's visualize to see if my favorite films are underrated!
+fav_films_imdb %>%
+  ggplot(aes(x= my_score, y=imdb_scores, label= film_name)) +
+  geom_point(size=3, fill="pink", color="pink")+
+   geom_text(color="purple", vjust="inward", check_overlap=TRUE, size=5)+
+  ggtitle("Comparing my favourite movies with their IMdb score")+
+ xlab("Nadiia's score")+ 
+ylab("IMDb score")
+# as we can see there is a correlation between the movies I like more and their IMDb score, which means whoever does IMdb rating has good taste!
+```
+
+```{r}
+# extra question 11.2 now let's compare my favoutire films and their critic's scores
+# turning joined tables with film names and rotten tomatoes reviews into an R variable rotten_tomatoes_critic
+query <- paste("select t1.film_name, t2.critic_score 
+from films t1
+join rotten_tomatoes_scores t2 on t1.film_id=t2.film_id",
+               sep = "" )
+critic_score <- tbl(movie_connection, sql(query))
+# transforming new variable into a data frame
+critic_score_df <- data.frame(critic_score)
+# joining it with my score
+fav_films_critic <- n_score %>% 
+  left_join(critic_score_df, by="film_name")
+
+# now visualize to see if my favorite films are underrated by the critics!
+fav_films_critic %>%
+  ggplot(aes(x= my_score, y=critic_score, label= film_name)) +
+  geom_point(size=3, fill="pink", color="pink")+
+   geom_text(color="purple", vjust="inward", check_overlap=TRUE, size=5)+
+  ggtitle("Comparing my favourite movies with their critic score")+
+ xlab("Nadiia's score")+ 
+ylab("Critic score")
+# as we can see, critics don't know anything about good rom-coms
+```
